@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # PHP-FPM сервис
+  php:
+    build:
+      context: ./docker/php
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: telegram-bot-php
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    environment:
+      - PHP_IDE_CONFIG=serverName=Docker
+    networks:
+      - telegram-network
+    depends_on:
+      - mysql
+
+  # Nginx сервис
+  nginx:
+    build:
+      context: ./docker/nginx
+    container_name: telegram-bot-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - telegram-network
+    depends_on:
+      - php
+
+  # MySQL сервис
+  mysql:
+    image: mysql:8.0
+    container_name: telegram-bot-mysql
+    ports:
+      - "3307:3306" 
+    environment:
+      MYSQL_DATABASE: telegram_bot_manager
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_PASSWORD: telegram_user
+      MYSQL_USER: telegram_user
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql:/docker-entrypoint-initdb.d
+    networks:
+      - telegram-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: telegram-bot-phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root_password
+    networks:
+      - telegram-network
+    depends_on:
+      - mysql
+
+networks:
+  telegram-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
