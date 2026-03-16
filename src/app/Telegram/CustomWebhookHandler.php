@@ -117,28 +117,27 @@ class CustomWebhookHandler extends WebhookHandler
     }
 
     /**
-     * Отправка сообщения через Telegram API
+     * Отправка сообщения через Telegraph
      */
     private function sendMessage($chatId, $text): void
     {
         try {
-            // Находим или создаем чат для этого бота
-            $chat = TelegraphChat::firstOrCreate(
+            // Сначала находим или создаем чат с правильными полями
+            $chat = \DefStudio\Telegraph\Models\TelegraphChat::firstOrCreate(
                 [
                     'chat_id' => $chatId,
-                    'telegraph_bot_id' => $this->bot->id,
+                    'telegraph_bot_id' => $this->bot->id, // Важно! Указываем bot_id
                 ],
                 [
-                    'name' => "Chat $chatId",
+                    'name' => "Chat {$chatId}",
                 ]
             );
 
             $chat->markdown($text)->send();
 
-            Log::info('✅ Message sent', [
+            Log::info('✅ Message sent via Telegraph', [
                 'chat_id' => $chatId,
-                'bot_id' => $this->bot->id,
-                'text_preview' => substr($text, 0, 30)
+                'bot_id' => $this->bot->id
             ]);
         } catch (\Exception $e) {
             Log::error('❌ Error sending message: ' . $e->getMessage(), [

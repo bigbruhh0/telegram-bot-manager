@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bot;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\BroadcastMessageToSubscribers;
 use DefStudio\Telegraph\Telegraph;
 
 class BotController extends Controller
@@ -63,5 +64,25 @@ class BotController extends Controller
 
         return redirect()->route('dashboard')
             ->with('success', '✅ Бот успешно удален');
+    }
+
+    public function broadcast(Request $request, Bot $bot)
+    {
+        // Проверяем, что бот принадлежит текущему пользователю
+        if ($bot->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'message' => 'required|string|max:4096'
+        ]);
+
+        if ($bot->subscribers()->count() === 0) {
+            return back()->with('error', 'Нет подписчиков для рассылки');
+        }
+
+        BroadcastMessageToSubscribers::dispatch($bot, $request->message);
+
+        return back()->with('success', 'Рассылка запущена! Сообщения будут отправлены в фоне.');
     }
 }
