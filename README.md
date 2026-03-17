@@ -31,7 +31,7 @@
 # 🚀 Быстрый старт
 1. Клонирование репозитория
 
-> git clone https://github.com/your-username/telegram-bot-manager.git
+> git clone https://github.com/bigbruhh0/telegram-bot-manager.git
 cd telegram-bot-manager
 
 2. Настройка окружения
