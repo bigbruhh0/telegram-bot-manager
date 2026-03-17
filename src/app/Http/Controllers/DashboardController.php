@@ -2,20 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Services\BotManagementService;
 
 class DashboardController extends Controller
 {
-    /**
-     * Показать дашборд пользователя со списком ботов
-     *
-     * @return \Illuminate\View\View
-     */
+    public function __construct(
+        protected BotManagementService $botService
+    ) {}
+
     public function index()
     {
-        // Получаем всех ботов текущего пользователя
-        $bots = auth()->user()->bots()->latest()->get();
-        
+        $bots = $this->botService->getUserBots(auth()->id());
+
         return view('dashboard', compact('bots'));
     }
 }

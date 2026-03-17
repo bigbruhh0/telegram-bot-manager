@@ -2,87 +2,49 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Bot;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use App\Jobs\BroadcastMessageToSubscribers;
-use DefStudio\Telegraph\Telegraph;
+use App\Services\BotManagementService;
+use App\Http\Requests\StoreBotRequest;
 
 class BotController extends Controller
 {
+    public function __construct(
+        protected BotManagementService $botService
+    ) {}
+
     /**
-     * Сохранить нового бота
+     * POST /bots - создание бота
      */
-    public function store(Request $request)
+    public function store(StoreBotRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'token' => 'required|string|unique:telegraph_bots,token',
-        ]);
+        $result = $this->botService->createBot(
+            auth()->id(),
+            $request->validated()
+        );
 
-        $bot = auth()->user()->bots()->create([
-            'name' => $validated['name'],
-            'token' => $validated['token'],
-        ]);
-
-        try {
-            $bot->registerWebhook()->send();
-
-            return redirect()->route('dashboard')
-                ->with('success', '✅ Бот добавлен и вебхук настроен на ' . env('APP_URL'));
-        } catch (\Exception $e) {
-            Log::error('Ошибка установки вебхука: ' . $e->getMessage());
-
-            return redirect()->route('dashboard')
-                ->with('warning', '⚠️ Бот добавлен, но вебхук не установлен: ' . $e->getMessage());
-        }
+        return redirect()->route('dashboard')
+            ->with($result['success'] ? 'success' : 'warning', $result['message']);
     }
-    /**
-     * Показать страницу управления ботом
-     */
-    public function show(Bot $bot)
-    {
-        if ($bot->user_id !== auth()->id()) {
-            abort(403, 'У вас нет доступа к этому боту');
-        }
 
-        $subscribers = $bot->subscribers()->latest()->paginate(10);
+    /**
+     * GET /bots/{id} - страница управления ботом (безопасно: принимает ID)
+     */
+    public function show(int $id)
+    {
+        $bot = $this->botService->getBotForUser($id, auth()->id());
+        $subscribers = $this->botService->getBotSubscribers($bot, auth()->id());
 
         return view('bots.show', compact('bot', 'subscribers'));
     }
 
     /**
-     * Удалить бота
+     * DELETE /bots/{id} - удаление бота (безопасно: принимает ID)
      */
-    public function destroy(Bot $bot)
+    public function destroy(int $id)
     {
-        if ($bot->user_id !== auth()->id()) {
-            abort(403, 'У вас нет доступа к этому боту');
-        }
-
-        $bot->delete();
+        $bot = $this->botService->getBotForUser($id, auth()->id());
+        $this->botService->deleteBot($bot, auth()->id());
 
         return redirect()->route('dashboard')
-            ->with('success', '✅ Бот успешно удален');
-    }
-
-    public function broadcast(Request $request, Bot $bot)
-    {
-        // Проверяем, что бот принадлежит текущему пользователю
-        if ($bot->user_id !== auth()->id()) {
-            abort(403);
-        }
-
-        $request->validate([
-            'message' => 'required|string|max:4096'
-        ]);
-
-        if ($bot->subscribers()->count() === 0) {
-            return back()->with('error', 'Нет подписчиков для рассылки');
-        }
-
-        BroadcastMessageToSubscribers::dispatch($bot, $request->message);
-
-        return back()->with('success', 'Рассылка запущена! Сообщения будут отправлены в фоне.');
+            ->with('success', '✅ Бот удален');
     }
 }

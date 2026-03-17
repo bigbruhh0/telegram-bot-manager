@@ -84,11 +84,11 @@
                                         </p>
                                     </div>
                                     <div class="space-x-2">
-                                        <a href="{{ route('bots.show', $bot) }}" 
+                                        <a href="{{ route('bots.show', $bot->id) }}" 
                                            class="text-blue-600 hover:text-blue-900">
                                             Управление
                                         </a>
-                                        <form method="POST" action="{{ route('bots.destroy', $bot) }}" class="inline">
+                                        <form method="POST" action="{{ route('bots.destroy', $bot->id) }}" class="inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 

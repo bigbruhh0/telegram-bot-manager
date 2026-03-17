@@ -2,39 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Bot;
-use App\Jobs\BroadcastMessageToSubscribers;
-use Illuminate\Http\Request;
+use App\Services\BroadcastService;
+use App\Http\Requests\BroadcastRequest;
 
 class BroadcastController extends Controller
 {
+    public function __construct(
+        protected BroadcastService $broadcastService
+    ) {}
+
     /**
-     * Отправить рассылку всем подписчикам
-     *
-     * @param Request $request
-     * @param Bot $bot
-     * @return \Illuminate\Http\RedirectResponse
+     * POST /bots/{id}/broadcast - отправка рассылки
      */
-    public function send(Request $request, Bot $bot)
+    public function send(BroadcastRequest $request, int $id)
     {
-        // Проверяем, что бот принадлежит текущему пользователю
-        if ($bot->user_id !== auth()->id()) {
-            abort(403, 'У вас нет доступа к этому боту');
-        }
-        
-        $validated = $request->validate([
-            'message' => 'required|string|max:4096',
-        ]);
+        $bot = $this->broadcastService->getBotForUser($id, auth()->id());
 
-        if ($bot->subscribers()->count() === 0) {
-            return redirect()->back()
-                ->with('error', 'Нет подписчиков для рассылки');
-        }
+        $result = $this->broadcastService->broadcast($bot, auth()->id(), $request->validated()['message']);
 
-        // Отправляем задачу в очередь
-        BroadcastMessageToSubscribers::dispatch($bot, $validated['message']);
+        if ($request->wantsJson()) {
+            return response()->json($result, $result['success'] ? 200 : 422);
+        }
 
         return redirect()->back()
-            ->with('success', 'Рассылка запущена! Сообщения будут отправлены подписчикам в фоновом режиме.');
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 }

@@ -12,23 +12,28 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     Route::post('/bots', [BotController::class, 'store'])->name('bots.store');
-    Route::get('/bots/{bot}', [BotController::class, 'show'])->name('bots.show');
-    Route::delete('/bots/{bot}', [BotController::class, 'destroy'])->name('bots.destroy');
-    
+
+    Route::get('/bots/{id}', [BotController::class, 'show'])
+        ->name('bots.show')
+        ->where('id', '[0-9]+');
+
+    Route::delete('/bots/{id}', [BotController::class, 'destroy'])
+        ->name('bots.destroy')
+        ->where('id', '[0-9]+');
+
     Route::delete('/subscribers/{subscriber}', [SubscriberController::class, 'destroy'])
         ->name('subscribers.destroy');
-    
-    Route::post('/bots/{bot}/broadcast', [BroadcastController::class, 'send'])
-        ->name('bots.broadcast');
-    
+
+    Route::post('/bots/{id}/broadcast', [BroadcastController::class, 'send'])
+        ->name('bots.broadcast')
+        ->where('id', '[0-9]+');
+
     Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    Route::post('/bots/{bot}/broadcast', [BotController::class, 'broadcast'])->name('bots.broadcast');
 });
 
 // Маршруты аутентификации Breeze
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
